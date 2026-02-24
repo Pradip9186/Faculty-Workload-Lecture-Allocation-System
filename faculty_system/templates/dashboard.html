@@ -1,0 +1,526 @@
+﻿{% extends 'base.html' %}
+{% load custom_tags %}
+
+{% block content %}
+
+<style>
+  /* ===== DASHBOARD STYLING ===== */
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  
+  .dashboard-title {
+    font-weight: 800;
+    font-size: 28px;
+    color: #1e3a8a;
+    margin: 0;
+  }
+  
+  .dashboard-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 4px;
+  }
+  
+  .user-badge {
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  
+  /* ===== METRICS SECTION ===== */
+  .metrics-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  
+  .metric-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+    border-left: 4px solid #3b82f6;
+    transition: all 0.3s ease;
+  }
+  
+  .metric-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  .metric-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: #1e3a8a;
+    margin: 0;
+  }
+  
+  .metric-label {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 6px;
+    font-weight: 600;
+  }
+  
+  /* ===== DIVISION FILTER ===== */
+  .filter-section {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  }
+  
+  .filter-label {
+    font-weight: 700;
+    font-size: 14px;
+    color: #1e3a8a;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  .division-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .division-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    color: #6b7280;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+  }
+  
+  .division-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+  
+  .division-btn.active {
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    border-color: #1e40af;
+  }
+  
+  /* ===== TABLES STYLING ===== */
+  .section-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e3a8a;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  
+  .table-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+    overflow-x: auto;
+  }
+  
+  .table {
+    margin: 0;
+    border-collapse: collapse;
+  }
+  
+  .table thead th {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    padding: 12px;
+    text-align: left;
+    font-weight: 700;
+    color: #1e3a8a;
+    font-size: 13px;
+  }
+  
+  .table tbody td {
+    border: 1px solid #e5e7eb;
+    padding: 12px;
+    font-size: 13px;
+    color: #4b5563;
+  }
+  
+  .table tbody tr:hover {
+    background: #f9fafb;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  
+  .status-normal {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  
+  .status-overloaded {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  /* ===== TIMETABLE GRID ===== */
+  .timetable-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+  
+  .timetable-grid th,
+  .timetable-grid td {
+    border: 1px solid #e5e7eb;
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+  }
+  
+  .timetable-grid th {
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    font-weight: 700;
+  }
+  
+  .timetable-grid td {
+    background: white;
+  }
+  
+  .timetable-cell-empty {
+    background: #f9fafb;
+    color: #9ca3af;
+  }
+  
+  .timetable-cell-filled {
+    background: #dbeafe;
+    font-weight: 600;
+    color: #0c4a6e;
+  }
+  
+  .timetable-faculty {
+    font-weight: 700;
+    display: block;
+    margin-bottom: 2px;
+  }
+  
+  .timetable-subject {
+    font-size: 11px;
+    color: #6b7280;
+  }
+  
+  /* ===== BUTTON STYLING ===== */
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+  }
+  
+  .download-btn:hover {
+    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.3);
+    transform: translateY(-2px);
+    color: white;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  
+  .section-header h3 {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e3a8a;
+    margin: 0;
+  }
+  
+  @media (max-width: 768px) {
+    .division-buttons {
+      flex-direction: column;
+    }
+    
+    .division-btn {
+      width: 100%;
+    }
+    
+    .dashboard-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .metrics-container {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<!-- ===== HEADER ===== -->
+<div class="dashboard-header">
+  <div>
+    <h1 class="dashboard-title">📚 Faculty Workload Dashboard</h1>
+    <p class="dashboard-subtitle">Manage faculty allocations and timetables</p>
+  </div>
+  <div class="user-badge">{{ request.user.first_name|default:request.user.username }}</div>
+</div>
+
+<!-- ===== TOP METRICS ===== -->
+<div class="metrics-container">
+  <div class="metric-card">
+    <p class="metric-value">{{ faculty_count }}</p>
+    <p class="metric-label">Total Faculties</p>
+  </div>
+  <div class="metric-card">
+    <p class="metric-value">{{ subjects_count }}</p>
+    <p class="metric-label">Total Subjects</p>
+  </div>
+  <div class="metric-card">
+    <p class="metric-value">{{ lectures_count }}</p>
+    <p class="metric-label">Total Lectures</p>
+  </div>
+</div>
+
+<!-- ===== FILTER & DIVISION BUTTONS ===== -->
+<div class="filter-section">
+  <label class="filter-label">🔍 Select Division</label>
+  <div class="division-buttons">
+    {% for div in 'ABCD' %}
+      <a href="?division={{ div }}" class="division-btn {% if selected_division == div %}active{% endif %}">
+        Division {{ div }}
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ===== SECTION 1: LECTURE SCHEDULE TABLE ===== -->
+<div class="table-card">
+  <h3 class="section-title">📋 Lecture Schedule — Division {{ selected_division }}</h3>
+  <div style="overflow-x: auto;">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Faculty</th>
+          <th>Subject</th>
+          <th>Day</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lec in lectures %}
+          <tr>
+            <td>{% if lec.faculty %}{{ lec.faculty.name }}{% else %}-{% endif %}</td>
+            <td>{% if lec.subject %}{{ lec.subject.subject_name }}{% else %}-{% endif %}</td>
+            <td>{{ lec.day }}</td>
+            <td>{{ lec.time_slot }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" style="text-align: center; color: #9ca3af;">No lectures scheduled for this division</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== SECTION 2: FACULTY WORKLOAD TABLE ===== -->
+<div class="table-card">
+  <h3 class="section-title">👥 Faculty Workload Analysis</h3>
+  <div style="overflow-x: auto;">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Faculty Name</th>
+          <th>Max Hours</th>
+          <th>Assigned</th>
+          <th>Status</th>
+          <th>Load %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for faculty in faculties %}
+          <tr>
+            <td><strong>{{ faculty.name }}</strong></td>
+            <td>{{ faculty.max_hours }}</td>
+            <td>{{ faculty.total_lectures }}</td>
+            <td>
+              <span class="status-badge status-{% if faculty.status == 'Overloaded' %}overloaded{% else %}normal{% endif %}">
+                {{ faculty.status }}
+              </span>
+            </td>
+            <td>
+              {% if faculty.status == 'Overloaded' %}
+                Overloaded
+              {% else %}
+                {{ faculty.load_pct }}%
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" style="text-align: center; color: #9ca3af;">No faculty data available</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== SECTION 3: WEEKLY TIMETABLE GRID ===== -->
+<div class="table-card">
+  <div class="section-header">
+    <h3>📅 Weekly Timetable — Division {{ selected_division }}</h3>
+    <a href="/download-pdf/?division={{ selected_division }}" class="download-btn" title="Download this division's timetable as PDF">
+      📥 Download PDF
+    </a>
+  </div>
+  <div style="overflow-x: auto;">
+    <table class="timetable-grid">
+      <thead>
+        <tr>
+          <th>Time Slot</th>
+          {% for day in days %}
+            <th>{{ day }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for slot in slots %}
+          <tr>
+            <td style="font-weight: 700; background: #f3f4f6;">{{ slot }}</td>
+            {% for day in days %}
+              {% with cell=timetable|get_item:day|get_item:slot %}
+                <td class="{% if cell %}timetable-cell-filled{% else %}timetable-cell-empty{% endif %}">
+                  {% if cell %}
+                    <span class="timetable-faculty">
+                      {% if cell.faculty %}{{ cell.faculty.name }}{% else %}-{% endif %}
+                    </span>
+                    <span class="timetable-subject">
+                      {% if cell.subject %}{{ cell.subject.subject_name }}{% else %}-{% endif %}
+                    </span>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              {% endwith %}
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== SECTION 4: FACULTY WORKLOAD CHART ===== -->
+<div class="table-card">
+  <h3 class="section-title">📊 Faculty Lecture Distribution Chart</h3>
+  <div class="chart-container">
+    <canvas id="workloadChart"></canvas>
+  </div>
+</div>
+
+<!-- ===== CHART.JS SCRIPT ===== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('workloadChart');
+    if (ctx) {
+      const labels = {{ faculty_names|safe }};
+      const dataVals = {{ lecture_counts|safe }};
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Assigned Lectures',
+            data: dataVals,
+            backgroundColor: [
+              'rgba(59, 130, 246, 0.8)',
+              'rgba(16, 185, 129, 0.8)',
+              'rgba(245, 158, 11, 0.8)',
+              'rgba(239, 68, 68, 0.8)',
+              'rgba(139, 92, 246, 0.8)',
+              'rgba(236, 72, 153, 0.8)',
+            ],
+            borderColor: [
+              'rgb(59, 130, 246)',
+              'rgb(16, 185, 129)',
+              'rgb(245, 158, 11)',
+              'rgb(239, 68, 68)',
+              'rgb(139, 92, 246)',
+              'rgb(236, 72, 153)',
+            ],
+            borderWidth: 1.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#6b7280',
+                font: {
+                  size: 12
+                }
+              },
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#6b7280',
+                stepSize: 1
+              },
+              grid: {
+                color: '#e5e7eb'
+              }
+            }
+          }
+        }
+      });
+    }
+  });
+</script>
+
+{% endblock %}

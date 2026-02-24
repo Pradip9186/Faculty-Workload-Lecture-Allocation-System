@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load custom_tags %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="mb-0">Faculty Workload</h3>
+      <small class="text-muted">ERP-style overview</small>
+    </div>
+    <div>
+      <span class="badge bg-light text-dark">{{ request.user.first_name|default:request.user.username }}</span>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-3">
+      <div class="card p-3 shadow-sm">
+        <div class="h4 mb-0">{{ faculty_count }}</div>
+        <small class="text-muted">Faculties</small>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="card p-3 shadow-sm">
+        <div class="h4 mb-0">{{ subjects_count }}</div>
+        <small class="text-muted">Subjects</small>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="card p-3 shadow-sm">
+        <div class="h4 mb-0">{{ lectures_count }}</div>
+        <small class="text-muted">Total Lectures</small>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="card p-3 shadow-sm">
+        <div class="h6 mb-0">Division</div>
+        <small class="text-muted">{{ selected_division }}</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-7 mb-3">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Upcoming Lectures</h5>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Time</th>
+                  <th>Day</th>
+                  <th>Subject</th>
+                  <th>Faculty</th>
+                  <th>Division</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lec in lectures|slice:":8" %}
+                <tr>
+                  <td>{{ lec.time_slot }}</td>
+                  <td>{{ lec.day }}</td>
+                  <td>{% if lec.subject %}{{ lec.subject.subject_name }}{% else %}-{% endif %}</td>
+                  <td>{% if lec.faculty %}{{ lec.faculty.name }}{% else %}-{% endif %}</td>
+                  <td>{{ lec.division }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted">No lectures scheduled</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5 mb-3">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Faculty Workload</h5>
+          <canvas id="workloadChart" height="180"></canvas>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6 class="card-title">Actions</h6>
+          <div class="d-grid gap-2">
+            <a href="/download-pdf/?division={{ selected_division }}" class="btn btn-outline-primary">Download Timetable PDF</a>
+            <a href="/admin/" class="btn btn-outline-secondary">Coordinator</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-3">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Weekly Timetable — Division {{ selected_division }}</h5>
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm mb-0">
+              <thead class="table-secondary">
+                <tr>
+                  <th>Time Slot</th>
+                  {% for d in days %}<th>{{ d }}</th>{% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for slot in slots %}
+                <tr>
+                  <td class="fw-bold">{{ slot }}</td>
+                  {% for d in days %}
+                  <td>
+                    {% with row=timetable|get_item:d %}
+                      {% with cell=row|get_item:slot %}
+                        {% if cell %}
+                          <div class="fw-bold">{% if cell.faculty %}{{ cell.faculty.name }}{% else %}-{% endif %}</div>
+                          <div class="text-muted small">{% if cell.subject %}{{ cell.subject.subject_name }}{% else %}-{% endif %}</div>
+                        {% else %}
+                          -
+                        {% endif %}
+                      {% endwith %}
+                    {% endwith %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('workloadChart');
+  if (ctx) {
+    const labels = {{ faculty_names|safe }} || [];
+    const dataVals = {{ lecture_counts|safe }} || [];
+    new Chart(ctx, {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ label: 'Assigned Lectures', data: dataVals, backgroundColor: 'rgba(13,110,253,0.85)' }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+  }
+</script>
+
+{% endblock %}

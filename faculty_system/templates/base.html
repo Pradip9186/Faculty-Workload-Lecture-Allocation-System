@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Faculty Workload System</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+/* ===== BODY ===== */
+body{
+background:#f0f4f9;
+font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+color:#333;
+}
+
+/* ===== SIDEBAR (PROFESSIONAL DARK MODE) ===== */
+.sidebar{
+background:linear-gradient(135deg, #1e3a8a, #3b82f6);
+min-height:100vh;
+box-shadow:4px 0px 20px rgba(0,0,0,0.1);
+position:sticky;
+top:0;
+}
+
+.sidebar h5{
+font-weight:800;
+color:white;
+letter-spacing:-0.5px;
+font-size:18px;
+padding:15px 0;
+border-bottom:2px solid rgba(255,255,255,0.1);
+margin-bottom:30px;
+}
+
+.sidebar a{
+color:rgba(255,255,255,0.85);
+padding:12px 15px;
+display:block;
+border-radius:10px;
+transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+text-decoration:none;
+font-weight:600;
+font-size:14px;
+letter-spacing:0.3px;
+margin-bottom:8px;
+}
+
+.sidebar a:hover{
+background:rgba(255,255,255,0.15);
+padding-left:22px;
+color:white;
+box-shadow:0 4px 12px rgba(0,0,0,0.2);
+}
+
+.sidebar a.active {
+background:rgba(255,255,255,0.25);
+color:white;
+border-left:4px solid #06b6d4;
+padding-left:11px;
+}
+
+/* ===== MAIN AREA ===== */
+.main-area{
+background:#f0f4f9;
+}
+
+/* ===== CARDS ===== */
+.card{
+border:none;
+border-radius:12px;
+box-shadow:0px 4px 12px rgba(0,0,0,0.08);
+transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.card:hover{
+transform:translateY(-4px);
+box-shadow:0px 12px 32px rgba(59,130,246,0.12);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.fade-in-down {
+  animation: fadeInDown 0.7s ease-out;
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.7s ease-out;
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.7s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.7s ease-out;
+}
+
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+.bounce-animation {
+  animation: bounce 2s infinite;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container-fluid">
+<div class="row">
+
+<!-- ===== SIDEBAR ===== -->
+<div class="col-md-2 sidebar p-3">
+
+    <h5 class="mb-4 text-center">🎓 Faculty System</h5>
+
+    <ul class="nav flex-column">
+
+        <li class="nav-item mb-2">
+            <a class="nav-link" href="/">🏠 Dashboard</a>
+        </li>
+
+        <li class="nav-item mb-2">
+            <a class="nav-link" href="/admin">🛠️ Timetable Coordinator</a>
+        </li>
+
+        {% if user.is_authenticated %}
+        <li class="nav-item mb-2">
+          <a class="nav-link" href="/logout/">🔒 Logout</a>
+        </li>
+        {% else %}
+        <li class="nav-item mb-2">
+          <a class="nav-link" href="/login/">🔑 Login</a>
+        </li>
+        {% endif %}
+
+    </ul>
+
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="col-md-10 main-area p-4">
+
+{% block content %}
+{% endblock %}
+
+</div>
+
+</div>
+</div>
+
+</body>
+</html>
