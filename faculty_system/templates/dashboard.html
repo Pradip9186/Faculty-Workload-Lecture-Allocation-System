@@ -187,46 +187,76 @@
     width: 100%;
     border-collapse: collapse;
     margin-top: 12px;
+    table-layout: fixed;
   }
   
   .timetable-grid th,
   .timetable-grid td {
-    border: 1px solid #e5e7eb;
-    padding: 10px;
+    border: 1px solid #1f2937;
+    padding: 6px 8px;
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .timetable-grid th:first-child,
+  .timetable-grid td:first-child {
+    width: 205px;
   }
   
   .timetable-grid th {
-    background: linear-gradient(135deg, #3b82f6, #1e40af);
-    color: white;
+    background: #cfd6df;
+    color: #111827;
     font-weight: 700;
+    text-transform: uppercase;
   }
-  
-  .timetable-grid td {
-    background: white;
+
+  .timetable-time-cell {
+    background: #ffffff;
+    color: #111827;
+    font-weight: 700;
+    text-align: left !important;
+    white-space: normal;
+    line-height: 1.25;
   }
   
   .timetable-cell-empty {
-    background: #f9fafb;
-    color: #9ca3af;
+    background: #ffffff;
+    color: #6b7280;
   }
   
   .timetable-cell-filled {
-    background: #dbeafe;
-    font-weight: 600;
-    color: #0c4a6e;
-  }
-  
-  .timetable-faculty {
-    font-weight: 700;
-    display: block;
-    margin-bottom: 2px;
+    background: #ffffff;
+    color: #111827;
   }
   
   .timetable-subject {
-    font-size: 11px;
+    font-weight: 700;
+    color: #111827;
+    display: block;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  
+  .timetable-faculty {
+    font-size: 12px;
     color: #6b7280;
+    font-weight: 500;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .timetable-break-cell {
+    background: #ffffff;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #111827;
+    vertical-align: middle;
   }
   
   /* ===== BUTTON STYLING ===== */
@@ -409,32 +439,42 @@
     <table class="timetable-grid">
       <thead>
         <tr>
-          <th>Time Slot</th>
+          <th>Day / Time</th>
           {% for day in days %}
             <th>{{ day }}</th>
           {% endfor %}
         </tr>
       </thead>
       <tbody>
-        {% for slot in slots %}
+        {% for row in timetable_rows %}
           <tr>
-            <td style="font-weight: 700; background: #f3f4f6;">{{ slot }}</td>
-            {% for day in days %}
-              {% with cell=timetable|get_item:day|get_item:slot %}
-                <td class="{% if cell %}timetable-cell-filled{% else %}timetable-cell-empty{% endif %}">
-                  {% if cell %}
-                    <span class="timetable-faculty">
-                      {% if cell.faculty %}{{ cell.faculty.name }}{% else %}-{% endif %}
-                    </span>
-                    <span class="timetable-subject">
-                      {% if cell.subject %}{{ cell.subject.subject_name }}{% else %}-{% endif %}
-                    </span>
-                  {% else %}
-                    -
-                  {% endif %}
-                </td>
-              {% endwith %}
-            {% endfor %}
+            <td class="timetable-time-cell">{{ row.label }}</td>
+            {% if row.type == 'lecture' %}
+              {% for day in days %}
+                {% with cell=timetable|get_item:row.key|get_item:day %}
+                  <td class="{% if cell %}timetable-cell-filled{% else %}timetable-cell-empty{% endif %}">
+                    {% if cell %}
+                      <span class="timetable-subject">
+                        {% if cell.subject %}{{ cell.subject.subject_name }}{% else %}-{% endif %}
+                      </span>
+                      <span class="timetable-faculty">
+                        {% if cell.faculty %}{{ cell.faculty.name }}{% else %}-{% endif %}
+                      </span>
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                {% endwith %}
+              {% endfor %}
+            {% else %}
+              <td colspan="{{ days|length }}" class="timetable-break-cell">
+                {% if row.type == 'short_break' %}
+                  SHORT BREAK
+                {% else %}
+                  LUNCH BREAK
+                {% endif %}
+              </td>
+            {% endif %}
           </tr>
         {% endfor %}
       </tbody>

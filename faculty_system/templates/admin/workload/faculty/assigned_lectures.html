@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div id="content-main">
+    <div class="module" style="padding: 16px;">
+      <h1 style="margin-top: 0;">Assigned Lectures - {{ faculty.name }}</h1>
+      <p style="margin-bottom: 16px;">Department: <strong>{{ faculty.department }}</strong> | Max Hours: <strong>{{ faculty.max_hours }}</strong></p>
+
+      {% if lecture_rows %}
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding: 8px; border-bottom: 1px solid #ddd;">Subject</th>
+              <th style="text-align:left; padding: 8px; border-bottom: 1px solid #ddd;">Division</th>
+              <th style="text-align:left; padding: 8px; border-bottom: 1px solid #ddd;">Day</th>
+              <th style="text-align:left; padding: 8px; border-bottom: 1px solid #ddd;">Time Slot</th>
+              <th style="text-align:left; padding: 8px; border-bottom: 1px solid #ddd;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in lecture_rows %}
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ row.lecture.subject.subject_name }}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ row.lecture.division }}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ row.lecture.day }}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ row.lecture.time_slot }}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">
+                  <a href="{{ row.change_url }}">Update</a>
+                  &nbsp;|&nbsp;
+                  <a href="{{ row.delete_url }}">Delete</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No lectures are assigned to this faculty.</p>
+      {% endif %}
+
+      <p style="margin-top: 16px;">
+        <a href="{{ back_url }}">← Back to Faculty</a>
+      </p>
+    </div>
+  </div>
+{% endblock %}

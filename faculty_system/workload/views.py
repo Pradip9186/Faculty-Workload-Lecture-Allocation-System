@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Faculty, Subject, Lecture
+from .models import Faculty, Subject, Lecture, TIME_CHOICES, DAY_CHOICES
 from django.db.models import Count
 
 # ⭐ LOGIN SYSTEM IMPORTS
@@ -185,23 +185,53 @@ def dashboard(request):
             f.status = "Normal"
 
     # ===============================
-    # ⭐ Weekly Grid Timetable Setup
+    # ⭐ Weekly Grid Timetable Setup (Image-style layout)
     # ===============================
-    days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
-    slots = ['9-10','10-11','11:15-12:15','12:15-1:15','3-4']
+    days = [day for day, _ in DAY_CHOICES]
+
+    slot_display_labels = {
+        '9-10': '9:00 am to 10:00 am',
+        '10-11': '10:00 am to 11:00 am',
+        '11:15-12:15': '11:15 am to 12:15 pm',
+        '12:15-1:15': '12:15 pm to 1:15 pm',
+        '3-4': '3:00 pm to 4:00 pm',
+    }
+
+    timetable_rows = []
+    for slot, _ in TIME_CHOICES:
+        timetable_rows.append({
+            'type': 'lecture',
+            'key': slot,
+            'label': slot_display_labels.get(slot, slot),
+        })
+
+        if slot == '10-11':
+            timetable_rows.append({
+                'type': 'short_break',
+                'key': 'short_break',
+                'label': '11:00 am to 11:15 am',
+            })
+
+        if slot == '12:15-1:15':
+            timetable_rows.append({
+                'type': 'lunch_break',
+                'key': 'lunch_break',
+                'label': '1:15 pm to 2:00 pm',
+            })
 
     timetable = {}
+    for row in timetable_rows:
+        if row['type'] != 'lecture':
+            continue
 
-    for day in days:
-        timetable[day] = {}
-        for slot in slots:
+        timetable[row['key']] = {}
+        for day in days:
             lecture = Lecture.objects.filter(
                 day=day,
-                time_slot=slot,
+                time_slot=row['key'],
                 division=selected_division
             ).first()
-
-            timetable[day][slot] = lecture
+            timetable[row['key']][day] = lecture
 
     # ===============================
     # ⭐ Chart.js Graph Data
@@ -223,7 +253,7 @@ def dashboard(request):
         'lectures': lectures,
         'faculties': faculties,
         'days': days,
-        'slots': slots,
+        'timetable_rows': timetable_rows,
         'timetable': timetable,
         'faculty_names': faculty_names,
         'lecture_counts': lecture_counts,
@@ -290,59 +320,128 @@ def download_timetable_pdf(request):
         # Add title only
         story.append(Paragraph(f"Weekly Timetable — Division {selected_division}", title_style))
 
-        # Small paragraph style for table cells
-        cell_style = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9, leading=10)
+        # Styles aligned with dashboard timetable content hierarchy
+        header_cell_style = ParagraphStyle(
+            'HeaderCell',
+            parent=styles['Normal'],
+            fontSize=10,
+            leading=12,
+            alignment=1,
+            fontName='Helvetica-Bold',
+            textColor=colors.HexColor('#111827'),
+        )
+        time_cell_style = ParagraphStyle(
+            'TimeCell',
+            parent=styles['Normal'],
+            fontSize=9.5,
+            leading=11,
+            alignment=0,
+            fontName='Helvetica-Bold',
+            textColor=colors.HexColor('#111827'),
+        )
+        lecture_cell_style = ParagraphStyle(
+            'LectureCell',
+            parent=styles['Normal'],
+            fontSize=9,
+            leading=11,
+            alignment=1,
+            fontName='Helvetica',
+            textColor=colors.HexColor('#111827'),
+            wordWrap='CJK',
+        )
+        break_cell_style = ParagraphStyle(
+            'BreakCell',
+            parent=styles['Normal'],
+            fontSize=11,
+            leading=13,
+            alignment=1,
+            fontName='Helvetica-Bold',
+            textColor=colors.HexColor('#111827'),
+        )
 
-        # Build weekly grid timetable
-        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        slots = ['9-10', '10-11', '11:15-12:15', '12:15-1:15', '3-4']
+        # Build same structure as dashboard (day columns, time rows, merged break rows)
+        days = [day for day, _ in DAY_CHOICES]
+        slot_display_labels = {
+            '9-10': '9:00 am to 10:00 am',
+            '10-11': '10:00 am to 11:00 am',
+            '11:15-12:15': '11:15 am to 12:15 pm',
+            '12:15-1:15': '12:15 pm to 1:15 pm',
+            '3-4': '3:00 pm to 4:00 pm',
+        }
 
-        # Create grid data
-        grid_header = [Paragraph('Time Slot', cell_style)] + [Paragraph(d, cell_style) for d in days]
-        grid_data = [grid_header]
+        timetable_rows = []
+        for slot, _ in TIME_CHOICES:
+            timetable_rows.append({
+                'type': 'lecture',
+                'key': slot,
+                'label': slot_display_labels.get(slot, slot),
+            })
+            if slot == '10-11':
+                timetable_rows.append({
+                    'type': 'short_break',
+                    'label': 'SHORT BREAK',
+                })
+            if slot == '12:15-1:15':
+                timetable_rows.append({
+                    'type': 'lunch_break',
+                    'label': 'LUNCH BREAK',
+                })
 
-        for slot in slots:
-            row = [Paragraph(slot, cell_style)]
-            for day in days:
-                lec = Lecture.objects.filter(
-                    day=day, 
-                    time_slot=slot, 
-                    division=selected_division
-                ).select_related('faculty', 'subject').first()
-                
-                if lec:
-                    faculty_name = lec.faculty.name if lec.faculty else '-'
-                    subject_name = lec.subject.subject_name if lec.subject else '-'
-                    cell_text = f"<b>{faculty_name}</b><br/><font size=8>{subject_name}</font>"
-                    cell = Paragraph(cell_text, cell_style)
-                else:
-                    cell = Paragraph('', cell_style)
-                row.append(cell)
-            grid_data.append(row)
+        division_lectures = Lecture.objects.filter(division=selected_division).select_related('faculty', 'subject')
+        lecture_map = {(lec.time_slot, lec.day): lec for lec in division_lectures}
 
-        # Set column widths - landscape gives more space
-        grid_col_widths = [1.0*inch] + [1.5*inch] * len(days)
+        grid_data = [[Paragraph('DAY / TIME', header_cell_style)] + [Paragraph(day.upper(), header_cell_style) for day in days]]
+        break_row_indices = []
+
+        for row in timetable_rows:
+            if row['type'] == 'lecture':
+                table_row = [Paragraph(row['label'], time_cell_style)]
+                for day in days:
+                    lec = lecture_map.get((row['key'], day))
+                    if lec:
+                        subject_name = lec.subject.subject_name if lec.subject else '-'
+                        faculty_name = lec.faculty.name if lec.faculty else '-'
+                        cell_text = f"<b>{subject_name}</b><br/><font size='8' color='#6b7280'>{faculty_name}</font>"
+                    else:
+                        cell_text = "-"
+                    table_row.append(Paragraph(cell_text, lecture_cell_style))
+                grid_data.append(table_row)
+            else:
+                row_index = len(grid_data)
+                break_row_indices.append(row_index)
+                grid_data.append([
+                    Paragraph('11:00 am to 11:15 am' if row['type'] == 'short_break' else '1:15 pm to 2:00 pm', time_cell_style),
+                    Paragraph(row['label'], break_cell_style),
+                ] + [''] * (len(days) - 1))
+
+        # Set column widths to keep all text inside cells like dashboard
+        first_col_width = 1.45 * inch
+        day_col_width = ((landscape(letter)[0] - (0.4 * inch * 2)) - first_col_width) / len(days)
+        grid_col_widths = [first_col_width] + [day_col_width] * len(days)
+
         grid_table = Table(grid_data, colWidths=grid_col_widths)
-        
-        # Style the grid table: keep it simple / ERP-like (no colored headers)
-        grid_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.white),
-            # Header text should be blue to match dashboard PDF requirement
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
+
+        table_style = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#cfd6df')),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('ALIGN', (0, 1), (0, -1), 'CENTER'),
-            ('ALIGN', (1, 1), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            # use a subtle row background only for readability
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#ffffff')]),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d1d5db')),
-            ('LEFTPADDING', (1, 1), (-1, -1), 6),
-            ('RIGHTPADDING', (1, 1), (-1, -1), 6),
-            ('TOPPADDING', (1, 1), (-1, -1), 6),
-            ('BOTTOMPADDING', (1, 1), (-1, -1), 6),
-        ]))
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.8, colors.HexColor('#1f2937')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]
+
+        for row_index in break_row_indices:
+            table_style.extend([
+                ('SPAN', (1, row_index), (-1, row_index)),
+                ('ALIGN', (1, row_index), (-1, row_index), 'CENTER'),
+            ])
+
+        grid_table.setStyle(TableStyle(table_style))
         grid_table.repeatRows = 1
         
         story.append(grid_table)
