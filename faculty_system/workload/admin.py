@@ -9,6 +9,7 @@ admin.site.site_header = "Timetable Coordinator"
 admin.site.site_title = "Timetable Coordinator Panel"
 admin.site.index_title = "Timetable Coordinator Dashboard"
 
+
 # ===============================
 # Custom Admin for Lecture Form
 # ===============================
@@ -17,8 +18,8 @@ class LectureAdminForm(forms.ModelForm):
         model = Lecture
         fields = '__all__'
         widgets = {
-            'day': forms.Select(),  # Dropdown for day selection
-            'time_slot': forms.Select(),  # Dropdown for time slot
+            'day': forms.Select,
+            'time_slot': forms.Select,
         }
 
 
@@ -27,7 +28,7 @@ class LectureAdmin(admin.ModelAdmin):
     list_display = ('faculty', 'subject', 'division', 'day', 'time_slot')
     list_filter = ('day', 'time_slot', 'division')
     search_fields = ('faculty__name', 'subject__subject_name')
-    ordering = ('day', 'time_slot')
+    ordering = ('day', 'time_slot__sort_order')
 
 
 class FacultyAdmin(admin.ModelAdmin):
@@ -72,4 +73,6 @@ class FacultyAdmin(admin.ModelAdmin):
 
 admin.site.register(Faculty, FacultyAdmin)
 admin.site.register(Subject)
+
+
 admin.site.register(Lecture, LectureAdmin)

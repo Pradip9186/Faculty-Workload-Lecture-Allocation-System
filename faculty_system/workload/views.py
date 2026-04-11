@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
-from .models import Faculty, Subject, Lecture, TIME_CHOICES, DAY_CHOICES
-from django.db.models import Count
+from .models import Faculty, Subject, Lecture, TimeSlot, DEFAULT_TIME_SLOTS, DAY_CHOICES
+from django.db.models import Sum
 
 # ⭐ LOGIN SYSTEM IMPORTS
 from django.contrib.auth import authenticate, login, logout
@@ -18,6 +18,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib import colors
 from datetime import datetime
 import io
+import json
 import matplotlib.pyplot as plt
 
 
@@ -164,22 +165,21 @@ def dashboard(request):
     # ⭐ Faculty Workload Calculation
     # ===============================
     faculties = Faculty.objects.annotate(
-        total_lectures=Count('lecture')
-    )
+        total_lectures=Sum('lecture__time_slot__duration_hours')
+    ).order_by('-total_lectures', 'name')
 
     # ===============================
-    # 🔥 WORKLOAD / OVERLOAD LOGIC (14 lectures = normal)
+    # 🔥 WORKLOAD / OVERLOAD LOGIC (14 lecture hours = normal)
     # ===============================
     MAX_NORMAL_LECTURES = 14
     for f in faculties:
-        # percentage based on 14 lectures as 100%
-        try:
-            pct = int(round((f.total_lectures / MAX_NORMAL_LECTURES) * 100))
-        except Exception:
-            pct = 0
+        total_hours = int(f.total_lectures or 0)
+        # percentage based on 14 lecture-hours as 100%
+        pct = int(round((total_hours / MAX_NORMAL_LECTURES) * 100)) if total_hours else 0
 
+        f.total_lectures = total_hours
         f.load_pct = pct
-        if f.total_lectures > MAX_NORMAL_LECTURES:
+        if total_hours > MAX_NORMAL_LECTURES:
             f.status = "Overloaded"
         else:
             f.status = "Normal"
@@ -189,30 +189,31 @@ def dashboard(request):
     # ===============================
     days = [day for day, _ in DAY_CHOICES]
 
-    slot_display_labels = {
-        '9-10': '9:00 am to 10:00 am',
-        '10-11': '10:00 am to 11:00 am',
-        '11:15-12:15': '11:15 am to 12:15 pm',
-        '12:15-1:15': '12:15 pm to 1:15 pm',
-        '3-4': '3:00 pm to 4:00 pm',
-    }
+    timeslots = list(TimeSlot.objects.order_by('sort_order'))
+    if not timeslots:
+        for slot_key, display_name, sort_order, duration in DEFAULT_TIME_SLOTS:
+            TimeSlot.objects.get_or_create(
+                slot_key=slot_key,
+                defaults={'display_name': display_name, 'sort_order': sort_order, 'duration_hours': duration}
+            )
+        timeslots = list(TimeSlot.objects.order_by('sort_order'))
 
     timetable_rows = []
-    for slot, _ in TIME_CHOICES:
+    for slot in timeslots:
         timetable_rows.append({
             'type': 'lecture',
-            'key': slot,
-            'label': slot_display_labels.get(slot, slot),
+            'key': slot.slot_key,
+            'label': slot.display_name,
         })
 
-        if slot == '10-11':
+        if slot.slot_key == '10-11':
             timetable_rows.append({
                 'type': 'short_break',
                 'key': 'short_break',
                 'label': '11:00 am to 11:15 am',
             })
 
-        if slot == '12:15-1:15':
+        if slot.slot_key == '12:15-1:15':
             timetable_rows.append({
                 'type': 'lunch_break',
                 'key': 'lunch_break',
@@ -228,20 +229,16 @@ def dashboard(request):
         for day in days:
             lecture = Lecture.objects.filter(
                 day=day,
-                time_slot=row['key'],
+                time_slot__slot_key=row['key'],
                 division=selected_division
-            ).first()
+            ).select_related('faculty', 'subject', 'time_slot').first()
             timetable[row['key']][day] = lecture
 
     # ===============================
     # ⭐ Chart.js Graph Data
     # ===============================
-    faculty_names = []
-    lecture_counts = []
-
-    for f in faculties:
-        faculty_names.append(f.name)
-        lecture_counts.append(f.total_lectures)
+    faculty_names_json = json.dumps([f.name for f in faculties])
+    lecture_counts_json = json.dumps([int(f.total_lectures or 0) for f in faculties])
 
     # ===============================
     # ⭐ Context Data
@@ -255,8 +252,8 @@ def dashboard(request):
         'days': days,
         'timetable_rows': timetable_rows,
         'timetable': timetable,
-        'faculty_names': faculty_names,
-        'lecture_counts': lecture_counts,
+        'faculty_names_json': faculty_names_json,
+        'lecture_counts_json': lecture_counts_json,
         'selected_division': selected_division
     }
 
@@ -361,34 +358,35 @@ def download_timetable_pdf(request):
 
         # Build same structure as dashboard (day columns, time rows, merged break rows)
         days = [day for day, _ in DAY_CHOICES]
-        slot_display_labels = {
-            '9-10': '9:00 am to 10:00 am',
-            '10-11': '10:00 am to 11:00 am',
-            '11:15-12:15': '11:15 am to 12:15 pm',
-            '12:15-1:15': '12:15 pm to 1:15 pm',
-            '3-4': '3:00 pm to 4:00 pm',
-        }
+        timeslots = list(TimeSlot.objects.order_by('sort_order'))
+        if not timeslots:
+            for slot_key, display_name, sort_order, duration in DEFAULT_TIME_SLOTS:
+                TimeSlot.objects.get_or_create(
+                    slot_key=slot_key,
+                    defaults={'display_name': display_name, 'sort_order': sort_order, 'duration_hours': duration}
+                )
+            timeslots = list(TimeSlot.objects.order_by('sort_order'))
 
         timetable_rows = []
-        for slot, _ in TIME_CHOICES:
+        for slot in timeslots:
             timetable_rows.append({
                 'type': 'lecture',
-                'key': slot,
-                'label': slot_display_labels.get(slot, slot),
+                'key': slot.slot_key,
+                'label': slot.display_name,
             })
-            if slot == '10-11':
+            if slot.slot_key == '10-11':
                 timetable_rows.append({
                     'type': 'short_break',
                     'label': 'SHORT BREAK',
                 })
-            if slot == '12:15-1:15':
+            if slot.slot_key == '12:15-1:15':
                 timetable_rows.append({
                     'type': 'lunch_break',
                     'label': 'LUNCH BREAK',
                 })
 
-        division_lectures = Lecture.objects.filter(division=selected_division).select_related('faculty', 'subject')
-        lecture_map = {(lec.time_slot, lec.day): lec for lec in division_lectures}
+        division_lectures = Lecture.objects.filter(division=selected_division).select_related('faculty', 'subject', 'time_slot')
+        lecture_map = {(lec.time_slot.slot_key, lec.day): lec for lec in division_lectures}
 
         grid_data = [[Paragraph('DAY / TIME', header_cell_style)] + [Paragraph(day.upper(), header_cell_style) for day in days]]
         break_row_indices = []

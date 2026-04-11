@@ -298,8 +298,25 @@
     color: #1e3a8a;
     margin: 0;
   }
+
+  .chart-container {
+    width: 100%;
+    min-height: 420px;
+    max-height: 520px;
+    padding-bottom: 10px;
+    overflow: hidden;
+  }
+
+  #workloadChart {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
   
   @media (max-width: 768px) {
+    .chart-container {
+      min-height: 320px;
+    }
     .division-buttons {
       flex-direction: column;
     }
@@ -496,8 +513,8 @@
   document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('workloadChart');
     if (ctx) {
-      const labels = {{ faculty_names|safe }};
-      const dataVals = {{ lecture_counts|safe }};
+      const labels = {{ faculty_names_json|safe }};
+      const dataVals = {{ lecture_counts_json|safe }};
       
       new Chart(ctx, {
         type: 'bar',
@@ -522,7 +539,11 @@
               'rgb(139, 92, 246)',
               'rgb(236, 72, 153)',
             ],
-            borderWidth: 1.5
+            borderWidth: 1.5,
+            borderRadius: 8,
+            barPercentage: 0.8,
+            categoryPercentage: 0.86,
+            maxBarThickness: 52
           }]
         },
         options: {
@@ -532,6 +553,14 @@
             legend: {
               display: true,
               position: 'top'
+            },
+            tooltip: {
+              enabled: true,
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + context.parsed.y;
+                }
+              }
             }
           },
           scales: {
@@ -540,7 +569,11 @@
                 color: '#6b7280',
                 font: {
                   size: 12
-                }
+                },
+                autoSkip: false,
+                maxRotation: 45,
+                minRotation: 35,
+                padding: 6
               },
               grid: {
                 display: false
